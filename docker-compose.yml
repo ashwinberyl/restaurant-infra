@@ -1,0 +1,61 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: restaurant-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: restaurant_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  table-service:
+    build: ../restaurant-table-service
+    container_name: table-service
+    environment:
+      DATABASE_URL: postgresql://postgres:${DB_PASSWORD:-postgres}@postgres:5432/restaurant_db
+      FLASK_ENV: production
+      SECRET_KEY: ${SECRET_KEY:-change-me-in-prod}
+    ports:
+      - "5001:5001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  reservation-service:
+    build: ../restaurant-reservation-service
+    container_name: reservation-service
+    environment:
+      DATABASE_URL: postgresql://postgres:${DB_PASSWORD:-postgres}@postgres:5432/restaurant_db
+      TABLE_SERVICE_URL: http://table-service:5001
+      PORT: 5002
+      NODE_ENV: production
+    ports:
+      - "5002:5002"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      table-service:
+        condition: service_started
+    restart: unless-stopped
+
+  ui:
+    build: ../restaurant-ui
+    container_name: restaurant-ui
+    ports:
+      - "3000:80"
+    depends_on:
+      - table-service
+      - reservation-service
+    restart: unless-stopped
+
+volumes:
+  pgdata:
