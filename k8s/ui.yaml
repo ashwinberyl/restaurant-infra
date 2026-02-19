@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: restaurant-ui
-          image: ghcr.io/ashwinberyl/restaurant-ui:sha-cdb774f
+          image: ghcr.io/ashwinberyl/restaurant-ui:sha-bd2e41f097cdb6c7440df6673f1ebdea796edb70
           ports:
             - containerPort: 80
           readinessProbe:
